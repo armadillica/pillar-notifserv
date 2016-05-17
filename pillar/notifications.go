@@ -8,12 +8,8 @@ import (
 )
 
 type Notification struct {
-	Id       bson.ObjectId `bson:"_id"`
-	Created  time.Time     `bson:"_created"`
-	Updated  time.Time     `bson:"_updated"`
-	User     bson.ObjectId `bson:"user"`
+	Created  time.Time     `bson:"_created" json:"_created"`
 	Activity bson.ObjectId `bson:"activity"`
-	Etag     string        `bson:"_etag"`
 }
 
 func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notification {
@@ -27,6 +23,7 @@ func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notifi
 		result := Notification{}
 		var last_seen time.Time
 		var query bson.M
+		var selector bson.M
 
 		for {
 			// Fetch notifications from MongoDB.
@@ -34,7 +31,11 @@ func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notifi
 				"_created": bson.M{"$gt": last_seen},
 				"user": user,
 			}
-			iter := notifications.Find(query).Sort("_created").Iter()
+			selector = bson.M{
+				"_created": 1,
+				"activity": 1,
+			}
+			iter := notifications.Find(query).Select(selector).Sort("_created").Iter()
 
 			// Send notifications to the client.
 			for iter.Next(&result) {
