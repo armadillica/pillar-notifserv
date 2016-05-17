@@ -130,7 +130,7 @@ func main() {
 	addr := ":8000"
 
 	// Connect to MongoDB
-	session, err := mgo.Dial("localhost")
+	session, err := mgo.Dial(pillar.DATABASE_HOST)
 	if err != nil {
 		panic(err)
 	}
