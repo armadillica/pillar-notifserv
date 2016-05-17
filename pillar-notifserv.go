@@ -43,7 +43,21 @@ func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	notifications := pillar.ForwardNotifications(self.session)
+	// Authenticate the user.
+	token, _, ok := r.BasicAuth()
+	if !ok {
+		log.Println("Unable to obtain user credentials.")
+		http.Error(w, "Unable to obtain user credentials.", http.StatusForbidden)
+		return
+	}
+	user, err := pillar.AuthUser(token, self.session)
+	if err != nil {
+		log.Println("Unable to authenticate user:", err)
+		http.Error(w, "Cannot authenticate user", http.StatusForbidden)
+		return
+	}
+
+	notifications := pillar.ForwardNotifications(user, self.session)
 
 	// Set the headers related to event streaming.
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -61,7 +75,7 @@ func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				log.Println(r.RemoteAddr, "Unable to marshal notification as JSON:", err)
 				break
 			}
-			fmt.Fprintf(w, "data: Message: %s\n\n", msg)
+			fmt.Fprintf(w, "data: %s\n\n", msg)
 			f.Flush()
 		}
 	}

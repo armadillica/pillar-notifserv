@@ -16,22 +16,24 @@ type Notification struct {
 	Etag     string        `bson:"_etag"`
 }
 
-
-func ForwardNotifications(session *mgo.Session) chan *Notification {
+func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notification {
 	ch := make(chan *Notification)
 
 	go func() {
 		my_sess := session.Copy()
 		defer my_sess.Close()
 
-		notifications := my_sess.DB("eve").C("notifications")
+		notifications := my_sess.DB(DATABASE).C("notifications")
 		result := Notification{}
 		var last_seen time.Time
 		var query bson.M
 
 		for {
 			// Fetch notifications from MongoDB.
-			query = bson.M{"_created": bson.M{"$gt": last_seen}}
+			query = bson.M{
+				"_created": bson.M{"$gt": last_seen},
+				"user": user,
+			}
 			iter := notifications.Find(query).Sort("_created").Iter()
 
 			// Send notifications to the client.
