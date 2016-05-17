@@ -18,7 +18,6 @@ import (
 	"github.com/armadillica/pillar-notifserv/pillar"
 	"gopkg.in/mgo.v2"
 	"encoding/json"
-	"gopkg.in/mgo.v2/bson"
 )
 
 
@@ -26,16 +25,6 @@ type SSE struct{
 	session *mgo.Session
 }
 
-type JsonNotification struct {
-	Activity bson.ObjectId `json:"activity"`
-
-}
-
-func (self *SSE) convert_notification(notif *pillar.Notification) JsonNotification {
-	return JsonNotification{
-		Activity: notif.Activity,
-	}
-}
 
 func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, "Channel started at", r.URL.Path)
@@ -76,18 +65,23 @@ func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
-	var json_notif JsonNotification
+	var json_notif pillar.JsonNotification
 	for {
 		select {
 		case <-close_notifier.CloseNotify():
 			log.Println(r.RemoteAddr, "Connection closed.")
 			return
 		case n := <-notifications:
-			json_notif = self.convert_notification(n)
+			json_notif, ok = pillar.ParseNotification(n, self.session)
+			if !ok {
+				log.Println(r.RemoteAddr, "Unable to parse notification.")
+				continue
+			}
+
 			msg, err := json.Marshal(json_notif)
 			if err != nil {
 				log.Println(r.RemoteAddr, "Unable to marshal notification as JSON:", err)
-				break
+				continue
 			}
 			fmt.Fprintf(w, "data: %s\n\n", msg)
 			f.Flush()
