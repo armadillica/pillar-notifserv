@@ -12,7 +12,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"github.com/armadillica/pillar-notifserv/pillar"
@@ -92,34 +91,7 @@ func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
 }
 
-// Handler for the main page, which we wire up to the
-// route at "/" below in `main`.
-//
-func MainPageHandler(w http.ResponseWriter, r *http.Request) {
 
-	// Did you know Golang's ServeMux matches only the
-	// prefix of the request URL?  It's true.  Here we
-	// insist the path is just "/".
-	if r.URL.Path != "/" {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-
-	// Read in the template with our SSE JavaScript code.
-	t, err := template.ParseFiles("templates/index.html")
-	if err != nil {
-		log.Fatal("dude, error parsing your template:", err)
-	}
-
-	// Render the template, writing to `w`.
-	t.Execute(w, "Duder")
-
-	// Done.
-	log.Println(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
-}
-
-// Main routine
-//
 func main() {
 	addr := ":8000"
 
@@ -131,8 +103,7 @@ func main() {
 	session.SetMode(mgo.Monotonic, true) // Optional. Switch the session to a monotonic behavior.
 	sse := &SSE{session}
 
-	http.Handle("/events/", sse)
-	http.Handle("/", http.HandlerFunc(MainPageHandler))
+	http.Handle("/", sse)
 
 	log.Println("Listening at", addr)
 	http.ListenAndServe(addr, nil)
