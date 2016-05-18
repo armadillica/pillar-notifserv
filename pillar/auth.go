@@ -16,7 +16,7 @@ func AuthUser(token string, session *mgo.Session) (bson.ObjectId, error) {
 	my_sess := session.Copy()
 	defer my_sess.Close()
 
-	tokens := session.DB(DATABASE).C("tokens")
+	tokens := session.DB(Conf.DatabaseName).C("tokens")
 	db_token := Token{}
 
 	query := bson.M{

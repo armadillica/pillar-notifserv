@@ -17,6 +17,7 @@ import (
 	"github.com/armadillica/pillar-notifserv/pillar"
 	"gopkg.in/mgo.v2"
 	"encoding/json"
+	"github.com/kelseyhightower/envconfig"
 )
 
 
@@ -93,10 +94,12 @@ func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 
 func main() {
-	addr := ":8000"
+	envconfig.Process("PILLAR_NOTIFSERV", &pillar.Conf)
+	log.Println("MongoDB database server:", pillar.Conf.DatabaseHost)
+	log.Println("MongoDB database name  :", pillar.Conf.DatabaseName)
 
 	// Connect to MongoDB
-	session, err := mgo.Dial(pillar.DATABASE_HOST)
+	session, err := mgo.Dial(pillar.Conf.DatabaseHost)
 	if err != nil {
 		panic(err)
 	}
@@ -105,6 +108,6 @@ func main() {
 
 	http.Handle("/", sse)
 
-	log.Println("Listening at", addr)
-	http.ListenAndServe(addr, nil)
+	log.Println("Listening at           :", pillar.Conf.Listen)
+	http.ListenAndServe(pillar.Conf.Listen, nil)
 }

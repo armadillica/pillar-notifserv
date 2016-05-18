@@ -70,7 +70,7 @@ func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notifi
 		my_sess := session.Copy()
 		defer my_sess.Close()
 
-		notifications := my_sess.DB(DATABASE).C("notifications")
+		notifications := my_sess.DB(Conf.DatabaseName).C("notifications")
 		result := Notification{}
 		var last_seen time.Time
 		var query bson.M
@@ -113,7 +113,7 @@ func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notifi
 }
 
 func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotification, bool) {
-	db := session.DB(DATABASE)
+	db := session.DB(Conf.DatabaseName)
 	activities_collection := db.C("activities")
 	actsub_collection := db.C("activities-subscriptions")
 	nodes_collection := db.C("nodes")

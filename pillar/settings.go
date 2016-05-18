@@ -1,5 +1,7 @@
 package pillar
 
-const DATABASE string = "eve"
-const DATABASE_HOST string = "localhost:27017"
-//const DATABASE_HOST string = "localhost:27018"
+var Conf struct {
+	DatabaseName string `default:"eve"`
+	DatabaseHost string `default:"localhost:27017"`
+	Listen       string `default:":5002"`
+}
