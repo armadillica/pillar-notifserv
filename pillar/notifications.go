@@ -1,16 +1,16 @@
 package pillar
 
 import (
-	"time"
-	"gopkg.in/mgo.v2/bson"
-	"gopkg.in/mgo.v2"
 	"fmt"
+	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 	"log"
+	"time"
 )
 
 type Notification struct {
 	Id       bson.ObjectId `bson:"_id"`
-	Created  time.Time     `bson:"_created" json:"_created"`
+	Created  time.Time     `bson:"_created"`
 	Activity bson.ObjectId `bson:"activity"`
 	User     bson.ObjectId `bson:"user"`
 	IsRead   bool          `bson:"is_read"`
@@ -22,6 +22,7 @@ type Activity struct {
 	ContextObject bson.ObjectId `bson:"context_object"`
 	Verb          string        `bson:"verb"`
 	ActorUser     bson.ObjectId `bson:"actor_user"`
+	Created       time.Time     `bson:"_created"`
 }
 
 type Node struct {
@@ -32,27 +33,28 @@ type Node struct {
 
 type User struct {
 	Id       bson.ObjectId `bson:"_id"`
-	FullName string `bson:"full_name"`  // XXX: Python used username instead. Why?
+	FullName string        `bson:"full_name"` // XXX: Python used username instead. Why?
+	Email    string        `bson:"email"`
 }
 
 type Subscription struct {
-	Id       bson.ObjectId `bson:"_id"`
+	Id            bson.ObjectId   `bson:"_id"`
 	Notifications map[string]bool `bson:"notifications"`
 }
 
 type JsonNotification struct {
 	Id                bson.ObjectId `json:"_id"`
-	Actor             interface{} `json:"actor"`
-	Action            interface{} `json:"action"`
-	ObjectType        string `json:"object_type"`
-	ObjectName        string `json:"object_name"`
+	Actor             interface{}   `json:"actor"`
+	Action            interface{}   `json:"action"`
+	ObjectType        string        `json:"object_type"`
+	ObjectName        string        `json:"object_name"`
 	ObjectId          bson.ObjectId `json:"object_id"`
-	ContextObjectType string `json:"context_object_type"`
-	ContextObjectName string `json:"context_object_name"`
+	ContextObjectType string        `json:"context_object_type"`
+	ContextObjectName string        `json:"context_object_name"`
 	ContextObjectId   bson.ObjectId `json:"context_object_id"`
-	Date              time.Time `json:"date"`
-	IsRead            bool `json:"is_read"`
-	IsSubscribed      bool `json:"is_subscribed"`
+	Date              time.Time     `json:"date"`
+	IsRead            bool          `json:"is_read"`
+	IsSubscribed      bool          `json:"is_subscribed"`
 	Subscription      bson.ObjectId `json:"subscription"`
 }
 
@@ -78,13 +80,13 @@ func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notifi
 			// Fetch notifications from MongoDB.
 			query = bson.M{
 				"_created": bson.M{"$gt": last_seen},
-				"user": user,
+				"user":     user,
 			}
 			selector = bson.M{
-				"_id": 1,
+				"_id":      1,
 				"_created": 1,
 				"activity": 1,
-				"is_read": 1,
+				"is_read":  1,
 			}
 			iter := notifications.Find(query).Select(selector).Sort("_created").Iter()
 
@@ -113,13 +115,24 @@ func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notifi
 func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotification, bool) {
 	db := session.DB(DATABASE)
 	activities_collection := db.C("activities")
-	activities_subscriptions_collection := db.C("activities-subscriptions")
+	actsub_collection := db.C("activities-subscriptions")
 	nodes_collection := db.C("nodes")
 	users_collection := db.C("users")
 
+	var selector bson.M
+
 	// Find the activity
-	var activity Activity;
-	if err := activities_collection.FindId(notif.Activity).One(&activity); err != nil {
+	var activity Activity
+	selector = bson.M{
+		"object_type":    1,
+		"object":         1,
+		"verb":           1,
+		"context_object": 1,
+		"actor_user":     1,
+		"_created":       1}
+	if err := activities_collection.FindId(notif.Activity).
+		Select(selector).
+		One(&activity); err != nil {
 		log.Println("Unable to find activity", notif.Activity)
 		return JsonNotification{}, false
 	}
@@ -129,8 +142,9 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 	}
 
 	// Find the node the activity links to
-	var node Node;
-	if err := nodes_collection.FindId(activity.Object).One(&node); err != nil {
+	var node Node
+	selector = bson.M{"node_type": 1, "user": 1, "parent": 1}
+	if err := nodes_collection.FindId(activity.Object).Select(selector).One(&node); err != nil {
 		log.Printf("Unable to find node %v: %v\n", activity.Object, err)
 		return JsonNotification{}, false
 	}
@@ -140,18 +154,21 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 		return JsonNotification{}, false
 	}
 	// Find parent node.
-	var parent_node Node;
-	if err := nodes_collection.FindId(node.Parent).One(&parent_node); err != nil {
+	var parent_node Node
+	selector = bson.M{"node_type": 1, "user": 1}
+	if err := nodes_collection.FindId(node.Parent).Select(selector).One(&parent_node); err != nil {
 		log.Printf("Unable to find parent node %v: %v\n", node.Parent, err)
 		return JsonNotification{}, false
 	}
 	// Name the relation.
-	var context_object_name string;
+	var context_object_name string
 	if parent_node.User == notif.User {
 		context_object_name = fmt.Sprintf("your %v", parent_node.NodeType)
 	} else {
-		var parent_comment_user User;
-		err := users_collection.FindId(parent_node.User).One(&parent_comment_user)
+		var parent_comment_user User
+		err := users_collection.FindId(parent_node.User).
+			Select(bson.M{"_id": 1, "full_name": 1}).
+			One(&parent_comment_user)
 
 		switch {
 		case err != nil:
@@ -165,7 +182,7 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 	}
 	// Turn the verb into a description.
 	var action string
-	switch(activity.Verb) {
+	switch activity.Verb {
 	case "replied":
 		action = "replied to"
 	case "commented":
@@ -176,13 +193,14 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 
 	// Find out whether the user is subscribed.
 	lookup := bson.M{
-		"user": notif.User,
+		"user":                notif.User,
 		"context_object_type": "node",
-		"context_object": activity.ContextObject,
+		"context_object":      activity.ContextObject,
 	}
 	var subscription Subscription
 	var is_subscribed bool
-	if err := activities_subscriptions_collection.Find(lookup).One(&subscription); err != nil {
+	selector = bson.M{"notifications": 1, "_id": 1}
+	if err := actsub_collection.Find(lookup).Select(selector).One(&subscription); err != nil {
 		is_subscribed = false
 		log.Println("Unable to find subscription for lookup", lookup, ":", err)
 	} else {
@@ -192,27 +210,29 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 	// Parse user_actor
 	var actor User
 	var parsed_actor ParsedActor
-	if err := users_collection.FindId(activity.ActorUser).One(&actor); err != nil {
+	selector = bson.M{"full_name": 1, "email": 1}
+	if err := users_collection.FindId(activity.ActorUser).Select(selector).One(&actor); err != nil {
 		log.Printf("Unable to find activity.ActorUser %v: %v\n", activity.ActorUser, err)
 	} else {
 		parsed_actor = ParsedActor{
 			UserName: actor.FullName,
-			Avatar: "",  // TODO: use gravatar
+			Avatar:   "", // TODO: use gravatar
 		}
 	}
 
 	return JsonNotification{
-		Id: notif.Id,
-		Actor: parsed_actor,
-		Action: action,
-		ObjectType: "comment",
-		ObjectName: "",
-		ObjectId: activity.Object,
+		Id:                notif.Id,
+		Actor:             parsed_actor,
+		Action:            action,
+		ObjectType:        "comment",
+		ObjectName:        "",
+		ObjectId:          activity.Object,
 		ContextObjectName: context_object_name,
 		ContextObjectType: parent_node.NodeType,
-		ContextObjectId: activity.ContextObject,
-		IsRead: notif.IsRead,
-		IsSubscribed: is_subscribed,
-		Subscription: subscription.Id,
+		ContextObjectId:   activity.ContextObject,
+		IsRead:            notif.IsRead,
+		IsSubscribed:      is_subscribed,
+		Subscription:      subscription.Id,
+		Date:              activity.Created,
 	}, true
 }
