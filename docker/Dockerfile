@@ -1,0 +1,10 @@
+FROM scratch
+MAINTAINER Dr. Sybren <sybren@blender.studio>
+
+EXPOSE 5002
+ENV PILLAR_NOTIFSERV_LISTEN=:5002
+ENV PILLAR_NOTIFSERV_DATABASENAME=eve
+ENV PILLAR_NOTIFSERV_DATABASEHOST=mongo_pillar:27017
+
+ADD pillar-notifserv /
+CMD ["/pillar-notifserv"]
