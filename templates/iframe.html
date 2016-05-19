@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pillar Notifserv</title>
+</head>
+<body>
+
+<script>
+    var source = new EventSource('/', {withCredentials: true});
+
+    source.addEventListener('notification', function (event) {
+        var notif = JSON.parse(event.data);
+        window.parent.postMessage(notif, "{{ . }}");
+    }, false);
+
+    /*
+    source.onopen = function () {
+        console.log('Connection opened');
+    };
+
+    source.onerror = function () {
+        console.log('Connection closed');
+    };
+
+    source.onmessage = function (event) {
+        // a message without a type was fired
+        console.log('Unknown message received', event)
+    };
+    */
+</script>
+
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pillar Notifserv -- outer document example</title>
+    <script>
+        var unread_new = 0;
+
+        window.addEventListener("message", function(event) {
+            // ----> CHANGE THIS TO YOUR PILLAR-NOTIFSERV HOST.
+            var expected_origin = "https://localhost:5002";
+
+            if (event.origin !== expected_origin) {
+                console.log("Wrong origin, got message from", event.origin,
+                        "instead of", expected_origin);
+                return;
+            }
+
+            handle_notification(event.data);
+        }, false);
+
+        function handle_notification(no) {
+            console.log(no);
+            // Increase the unread_new counter
+            if (!no.is_read) {
+                unread_new++
+            }
+
+            // Check if the current item has been read, to style it
+            var is_read = no.is_read ? 'is_read' : '';
+
+            var read_info = 'data-id="' + no.id + '" data-read="' + no.is_read + '"';
+
+            // Notification list item
+            var content = '<li class="nc-item ' + is_read + '" data-id="' + no.id + '">';
+
+            // User's avatar
+            content += '<div class="nc-avatar">';
+            content += '<img ' + read_info + ' src="' + no.avatar + '"> ';
+            content += '</div>';
+
+            // Text of the notification
+            content += '<div class="nc-text">';
+
+            // Username and action
+            content += no.actor + ' ' + no.action + ' ';
+
+            // Object
+            content += '<a ' + read_info + '" href="/nodes/' + no.object_id + '/redirect" class="nc-a">';
+            content += no.context_object_name + ' ';
+            content += '</a> ';
+
+            // Date
+            content += '<span class="nc-date">';
+            content += '<a ' + read_info + '" href="/nodes/' + no.object_id + '/redirect" class="nc-a">';
+            content += no.date;
+            content += '</a>';
+            content += '</span>';
+
+            // Read Toggle
+            content += '<a id="' + no.id + '" href="/notifications/' + no.id + '/read-toggle" class="nc-button nc-read_toggle">';
+            if (no.is_read) {
+                content += '<i title="Mark as Unread" class="pi pi-circle-dot"></i>';
+            } else {
+                content += '<i title="Mark as Read" class="pi pi-circle"></i>';
+            }
+            content += '</a>';
+
+            // Subscription Toggle
+            content += '<a href="/notifications/' + no.id + '/subscription-toggle" class="nc-button nc-subscription_toggle">';
+            if (no.is_subscribed) {
+                content += '<i title="Turn Off Notifications" class="pi-toggle-on"></i>';
+            } else {
+                content += '<i title="Turn On Notifications" class="pi-toggle-off"></i>';
+            }
+            content += '</a>';
+
+            content += '</div>';
+            content += '</li>';
+
+            var notif_area = document.getElementById('notifications');
+            notif_area.innerHTML = content + notif_area.innerHTML;
+        }
+    </script>
+</head>
+<body>
+
+<ol id="notifications"></ol>
+
+<iframe id='notif-iframe' src="https://localhost:5002/iframe/"></iframe>
+
+</body>
+</html>

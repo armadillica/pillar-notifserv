@@ -100,6 +100,30 @@ func http_sse(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
 }
 
+func http_template(w http.ResponseWriter, r *http.Request) {
+	mongo_sess := session.Clone()
+	defer mongo_sess.Close()
+
+	// Authenticate the user.
+	_, err := pillar.AuthRequest(r, session)
+	if err != nil {
+		http_unauthorized(w, err)
+		return
+	}
+
+	// Read in the template with our SSE JavaScript code.
+	template_path := path.Base(path.Clean(r.URL.Path))
+	t, err := template.ParseFiles(fmt.Sprintf("templates/%s.html", template_path))
+	if err != nil {
+		log.Fatal("dude, error parsing your template:", err)
+	}
+
+	// Render the template, writing to `w`.
+	t.Execute(w, pillar.Conf.Origin)
+
+	// Done.
+	log.Println(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
+}
 
 func main() {
 	envconfig.Process("PILLAR_NOTIFSERV", &pillar.Conf)
@@ -116,6 +140,12 @@ func main() {
 
 	http.Handle("/", http.HandlerFunc(http_sse))
 
+	if pillar.Conf.Origin == "" {
+		log.Println("Origin not configured, /iframe/ handler not available.")
+	} else {
+		log.Println("Accepting embedding by : ", pillar.Conf.Origin)
+		http.Handle("/iframe/", http.HandlerFunc(http_template))
+	}
 
 	log.Println("Listening at           :", pillar.Conf.Listen)
 
