@@ -118,5 +118,15 @@ func main() {
 
 
 	log.Println("Listening at           :", pillar.Conf.Listen)
-	http.ListenAndServe(pillar.Conf.Listen, nil)
+
+	// Fall back to insecure server if TLS certificate/key is not defined.
+	if pillar.Conf.TLSCert == "" && pillar.Conf.TLSKey == "" {
+		log.Println("WARNING: TLS not enabled!")
+		log.Fatal(http.ListenAndServe(pillar.Conf.Listen, nil))
+	}
+
+	log.Fatal(http.ListenAndServeTLS(pillar.Conf.Listen,
+		pillar.Conf.TLSCert,
+		pillar.Conf.TLSKey,
+		nil))
 }
