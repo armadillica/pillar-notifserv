@@ -43,8 +43,9 @@ type Subscription struct {
 }
 
 type JsonNotification struct {
-	Id                bson.ObjectId `json:"_id"`
-	Actor             interface{}   `json:"actor"`
+	Id                bson.ObjectId `json:"id"`
+	Actor             string        `json:"actor"`
+	Avatar            string        `json:"avatar"`
 	Action            interface{}   `json:"action"`
 	ObjectType        string        `json:"object_type"`
 	ObjectName        string        `json:"object_name"`
@@ -56,11 +57,6 @@ type JsonNotification struct {
 	IsRead            bool          `json:"is_read"`
 	IsSubscribed      bool          `json:"is_subscribed"`
 	Subscription      bson.ObjectId `json:"subscription"`
-}
-
-type ParsedActor struct {
-	UserName string `json:"username"`
-	Avatar   string `json:"avatar"`
 }
 
 func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notification {
@@ -209,20 +205,15 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 
 	// Parse user_actor
 	var actor User
-	var parsed_actor ParsedActor
 	selector = bson.M{"full_name": 1, "email": 1}
 	if err := users_collection.FindId(activity.ActorUser).Select(selector).One(&actor); err != nil {
 		log.Printf("Unable to find activity.ActorUser %v: %v\n", activity.ActorUser, err)
-	} else {
-		parsed_actor = ParsedActor{
-			UserName: actor.FullName,
-			Avatar:   "", // TODO: use gravatar
-		}
 	}
 
 	return JsonNotification{
 		Id:                notif.Id,
-		Actor:             parsed_actor,
+		Actor:             actor.FullName,
+		Avatar:            "", // TODO: use gravatar
 		Action:            action,
 		ObjectType:        "comment",
 		ObjectName:        "",
