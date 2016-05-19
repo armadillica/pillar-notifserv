@@ -11,22 +11,32 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/armadillica/pillar-notifserv/pillar"
+	"github.com/kelseyhightower/envconfig"
+	"gopkg.in/mgo.v2"
+	"html/template"
 	"log"
 	"net/http"
-	"github.com/armadillica/pillar-notifserv/pillar"
-	"gopkg.in/mgo.v2"
-	"encoding/json"
-	"github.com/kelseyhightower/envconfig"
+	"path"
 )
 
+var session *mgo.Session
 
-type SSE struct{
-	session *mgo.Session
+func http_unauthorized(w http.ResponseWriter, err error) {
+	log.Println(err.Error())
+	w.Header().Add("WWW-Authenticate", "Basic")
+	http.Error(w, "Cannot authenticate user", http.StatusUnauthorized)
 }
 
+func http_sse(w http.ResponseWriter, r *http.Request) {
+	// Make sure that we only serve /, and not a sub-resource.
+	if r.URL.Path != "/" {
+		http.Error(w, "Not found", http.StatusNotFound)
+		return
+	}
 
-func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, "Channel started at", r.URL.Path)
 
 	// Make sure that the writer supports flushing.
@@ -44,21 +54,16 @@ func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Authenticate the user.
-	token, _, ok := r.BasicAuth()
-	if !ok {
-		log.Println("Unable to obtain user credentials.")
-		http.Error(w, "Unable to obtain user credentials.", http.StatusForbidden)
-		return
-	}
-	user, err := pillar.AuthUser(token, self.session)
+	mongo_sess := session.Copy()
+	defer mongo_sess.Close()
+
+	user, err := pillar.AuthRequest(r, session)
 	if err != nil {
-		log.Println("Unable to authenticate user:", err)
-		http.Error(w, "Cannot authenticate user", http.StatusForbidden)
+		http_unauthorized(w, err)
 		return
 	}
 
-	notifications := pillar.ForwardNotifications(user, self.session)
+	notifications := pillar.ForwardNotifications(user, session)
 
 	// Set the headers related to event streaming.
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -72,7 +77,7 @@ func (self *SSE) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			log.Println(r.RemoteAddr, "Connection closed.")
 			return
 		case n := <-notifications:
-			json_notif, ok = pillar.ParseNotification(n, self.session)
+			json_notif, ok = pillar.ParseNotification(n, session)
 			if !ok {
 				log.Println(r.RemoteAddr, "Unable to parse notification.")
 				continue
@@ -99,14 +104,15 @@ func main() {
 	log.Println("MongoDB database name  :", pillar.Conf.DatabaseName)
 
 	// Connect to MongoDB
-	session, err := mgo.Dial(pillar.Conf.DatabaseHost)
+	var err error
+	session, err = mgo.Dial(pillar.Conf.DatabaseHost)
 	if err != nil {
 		panic(err)
 	}
 	session.SetMode(mgo.Monotonic, true) // Optional. Switch the session to a monotonic behavior.
-	sse := &SSE{session}
 
-	http.Handle("/", sse)
+	http.Handle("/", http.HandlerFunc(http_sse))
+
 
 	log.Println("Listening at           :", pillar.Conf.Listen)
 	http.ListenAndServe(pillar.Conf.Listen, nil)

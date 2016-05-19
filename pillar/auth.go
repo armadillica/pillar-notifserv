@@ -5,6 +5,8 @@ import (
 	"time"
 	"gopkg.in/mgo.v2/bson"
 	"log"
+	"net/http"
+	"errors"
 )
 
 type Token struct {
@@ -29,4 +31,18 @@ func AuthUser(token string, session *mgo.Session) (bson.ObjectId, error) {
 	}
 
 	return db_token.User, nil
+}
+
+func AuthRequest(r *http.Request, session *mgo.Session) (bson.ObjectId, error) {
+	token, _, ok := r.BasicAuth()
+	if !ok {
+		return bson.NewObjectId(), errors.New("No authentication header given")
+	}
+
+	user, err := AuthUser(token, session)
+	if err != nil {
+		return bson.NewObjectId(), errors.New("Invalid credentials")
+	}
+
+	return user, nil
 }
