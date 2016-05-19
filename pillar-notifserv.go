@@ -88,6 +88,9 @@ func http_sse(w http.ResponseWriter, r *http.Request) {
 				log.Println(r.RemoteAddr, "Unable to marshal notification as JSON:", err)
 				continue
 			}
+
+			fmt.Fprintf(w, "id: %v\n", json_notif.Id)
+			fmt.Fprintf(w, "event: notification\n")
 			fmt.Fprintf(w, "data: %s\n\n", msg)
 			f.Flush()
 		}
