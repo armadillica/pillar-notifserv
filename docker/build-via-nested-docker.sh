@@ -25,7 +25,14 @@ if docker ps -a --no-trunc | grep -q notifserv; then
     docker rm notifserv
 fi
 
-docker create --name notifserv --net host  armadillica/pillar-notifserv:${HASH}
-docker export notifserv | gzip > ${EXPORT_TO}
-echo
+docker save armadillica/pillar-notifserv:${HASH} | gzip > ${EXPORT_TO}
 echo Docker container created and exported to ${EXPORT_TO}
+
+cat > pillar-notifserv-install-${HASH}.sh << EOT
+#!/bin/sh
+gunzip < pillar-notifserv-${HASH}.docker.tgz | docker load
+echo
+echo Image installed, create container with:
+echo docker create --name notifserv --net host  armadillica/pillar-notifserv:${HASH}
+EOT
+chmod +x pillar-notifserv-install-${HASH}.sh

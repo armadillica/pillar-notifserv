@@ -1,3 +1,4 @@
 .*.swp
 /docker/pillar-notifserv
 /docker/pillar-notifserv*.docker.tgz
+/docker/pillar-notifserv-install*.sh
