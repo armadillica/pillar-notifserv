@@ -1,12 +1,12 @@
 package pillar
 
 import (
+	"errors"
 	"gopkg.in/mgo.v2"
-	"time"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"net/http"
-	"errors"
+	"time"
 )
 
 type Token struct {
@@ -22,7 +22,7 @@ func AuthUser(token string, session *mgo.Session) (bson.ObjectId, error) {
 	db_token := Token{}
 
 	query := bson.M{
-		"token": token,
+		"token":       token,
 		"expire_time": bson.M{"$gt": time.Now()}}
 
 	if err := tokens.Find(query).One(&db_token); err != nil {
