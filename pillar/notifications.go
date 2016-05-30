@@ -6,6 +6,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"time"
+	"github.com/eefret/gravatar"
 )
 
 type Notification struct {
@@ -210,10 +211,15 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 		log.Printf("Unable to find activity.ActorUser %v: %v\n", activity.ActorUser, err)
 	}
 
+	var grav_url string
+	if grav, gerr := gravatar.New(); gerr == nil {
+		grav_url = grav.URLParse(actor.Email)
+	}
+
 	return JsonNotification{
 		Id:                notif.Id,
 		Actor:             actor.FullName,
-		Avatar:            "", // TODO: use gravatar
+		Avatar:            grav_url,
 		Action:            action,
 		ObjectType:        "comment",
 		ObjectName:        "",
