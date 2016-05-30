@@ -17,3 +17,8 @@ $ sudo apt-get install golang
 
 That is all you need to get `go` working on your system. (You can use `go env GOROOT` to be sure
 where the Go files are, if you're curious.) Don't forget to create your GOPATH.
+
+
+## Fabio
+
+The HTTP proxy code originated at [Fabio](https://github.com/eBay/fabio).
