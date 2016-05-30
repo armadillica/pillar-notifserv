@@ -4,12 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/armadillica/pillar-notifserv/pillar"
+	"github.com/armadillica/pillar-notifserv/proxy"
 	"github.com/kelseyhightower/envconfig"
 	"gopkg.in/mgo.v2"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"path"
+	"time"
 )
 
 var session *mgo.Session
@@ -21,12 +25,6 @@ func http_unauthorized(w http.ResponseWriter, err error) {
 }
 
 func http_sse(w http.ResponseWriter, r *http.Request) {
-	// Make sure that we only serve /, and not a sub-resource.
-	if r.URL.Path != "/" {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-
 	log.Println(r.RemoteAddr, "Channel started at", r.URL.Path)
 
 	// Make sure that the writer supports flushing.
@@ -115,6 +113,32 @@ func http_template(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
 }
 
+func register_http_proxy() {
+	if pillar.Conf.HttpForward == "" {
+		return
+	}
+
+	log.Println("Forwarding requests to :", pillar.Conf.HttpForward)
+	target_url, err := url.Parse(pillar.Conf.HttpForward)
+	if err != nil {
+		log.Fatalf("Unable to parse %q as URL.\n", pillar.Conf.HttpForward)
+	}
+	proxy_cnf := pillar.ProxyConf{Target: *target_url}
+
+	// These values are definitely open for discussion.
+	tr := &http.Transport{
+		ResponseHeaderTimeout: 10 * time.Second,
+		MaxIdleConnsPerHost:   2,
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 10 * time.Second,
+		}).Dial,
+	}
+
+	proxy := proxy.New(tr, proxy_cnf)
+	http.Handle("/", proxy)
+}
+
 func main() {
 	envconfig.Process("PILLAR_NOTIFSERV", &pillar.Conf)
 	log.Println("MongoDB database server:", pillar.Conf.DatabaseHost)
@@ -128,12 +152,14 @@ func main() {
 	}
 	session.SetMode(mgo.Monotonic, true) // Optional. Switch the session to a monotonic behavior.
 
-	http.HandleFunc("/", http_sse)
+	register_http_proxy()
+
+	http.HandleFunc("/notifications/", http_sse)
 
 	if pillar.Conf.Origin == "" {
 		log.Println("Origin not configured, /iframe/ handler not available.")
 	} else {
-		log.Println("Accepting embedding by : ", pillar.Conf.Origin)
+		log.Println("Accepting embedding by :", pillar.Conf.Origin)
 		http.HandleFunc("/iframe/", http_template)
 	}
 
