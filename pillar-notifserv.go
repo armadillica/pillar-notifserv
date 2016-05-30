@@ -128,13 +128,13 @@ func main() {
 	}
 	session.SetMode(mgo.Monotonic, true) // Optional. Switch the session to a monotonic behavior.
 
-	http.Handle("/", http.HandlerFunc(http_sse))
+	http.HandleFunc("/", http_sse)
 
 	if pillar.Conf.Origin == "" {
 		log.Println("Origin not configured, /iframe/ handler not available.")
 	} else {
 		log.Println("Accepting embedding by : ", pillar.Conf.Origin)
-		http.Handle("/iframe/", http.HandlerFunc(http_template))
+		http.HandleFunc("/iframe/", http_template)
 	}
 
 	log.Println("Listening at           :", pillar.Conf.Listen)
