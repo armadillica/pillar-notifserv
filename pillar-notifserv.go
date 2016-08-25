@@ -130,7 +130,7 @@ func register_http_proxy() {
 		ResponseHeaderTimeout: 10 * time.Second,
 		MaxIdleConnsPerHost:   2,
 		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
+			Timeout:   10 * time.Minute,
 			KeepAlive: 10 * time.Second,
 		}).Dial,
 	}
