@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-HASH=$(git show-ref --head --hash HEAD)
+HASH=$(git show-ref --head --hash HEAD | head -n 1)
 EXPORT_TO=pillar-notifserv-${HASH}.docker.tgz
 
 # Use Docker to get Go in a way that allows overwriting the
