@@ -28,7 +28,6 @@ func http_sse(w http.ResponseWriter, r *http.Request) {
 	log.Println(r.RemoteAddr, "Channel started at", r.URL.Path)
 
 	// Make sure that the writer supports flushing.
-	//
 	f, ok := w.(http.Flusher)
 	if !ok {
 		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
