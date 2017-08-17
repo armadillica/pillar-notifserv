@@ -103,8 +103,6 @@ func ForwardNotifications(user bson.ObjectId, session *mgo.Session) chan *Notifi
 
 			time.Sleep(5 * time.Second)
 		}
-
-		close(ch)
 	}()
 
 	return ch

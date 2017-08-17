@@ -58,6 +58,8 @@ func http_sse(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	defer log.Println(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
+
 	var json_notif pillar.JsonNotification
 	for {
 		select {
@@ -83,9 +85,6 @@ func http_sse(w http.ResponseWriter, r *http.Request) {
 			f.Flush()
 		}
 	}
-
-	// Done.
-	log.Println(r.RemoteAddr, "Finished HTTP request at", r.URL.Path)
 }
 
 func http_template(w http.ResponseWriter, r *http.Request) {
