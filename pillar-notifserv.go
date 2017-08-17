@@ -154,7 +154,7 @@ func main() {
 
 	register_http_proxy()
 
-	http.HandleFunc("/notifications/", http_sse)
+	http.HandleFunc("/notifserv/", http_sse)
 
 	if pillar.Conf.Origin == "" {
 		log.Println("Origin not configured, /iframe/ handler not available.")
