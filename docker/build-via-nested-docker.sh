@@ -17,7 +17,7 @@ EOT
 # Use the statically linked executable to build our final Docker image.
 docker build -t armadillica/pillar-notifserv:${HASH} .
 
-if docker ps -a --no-trunc | grep -q notifserv; then
+if docker ps -a --no-trunc --filter "name=notifserv" | grep -q notifserv; then
     echo
     echo '==> Docker container "notifserv" already exists, press ENTER to remove and recreate.'
     read dummy
