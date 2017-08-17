@@ -45,16 +45,16 @@ type Subscription struct {
 }
 
 type JsonNotification struct {
-	Id                bson.ObjectId `json:"id"`
-	Actor             string        `json:"actor"`
-	Avatar            string        `json:"avatar"`
+	Id                bson.ObjectId `json:"_id"`
+	Actor             string        `json:"username"`
+	Avatar            string        `json:"username_avatar"`
 	Action            interface{}   `json:"action"`
 	ObjectType        string        `json:"object_type"`
 	ObjectName        string        `json:"object_name"`
-	ObjectId          bson.ObjectId `json:"object_id"`
+	ObjectURL         string        `json:"object_url"`
 	ContextObjectType string        `json:"context_object_type"`
 	ContextObjectName string        `json:"context_object_name"`
-	ContextObjectId   bson.ObjectId `json:"context_object_id"`
+	ContextObjectURL  string        `json:"context_object_url"`
 	Date              time.Time     `json:"date"`
 	IsRead            bool          `json:"is_read"`
 	IsSubscribed      bool          `json:"is_subscribed"`
@@ -222,10 +222,10 @@ func ParseNotification(notif *Notification, session *mgo.Session) (JsonNotificat
 		Action:            action,
 		ObjectType:        "comment",
 		ObjectName:        "",
-		ObjectId:          activity.Object,
+		ObjectURL:         fmt.Sprintf("/nodes/%s/redir", activity.Object.Hex()),
 		ContextObjectName: context_object_name,
 		ContextObjectType: parent_node.NodeType,
-		ContextObjectId:   activity.ContextObject,
+		ContextObjectURL:  fmt.Sprintf("/nodes/%s/redir", activity.ContextObject.Hex()),
 		IsRead:            notif.IsRead,
 		IsSubscribed:      is_subscribed,
 		Subscription:      subscription.Id,
