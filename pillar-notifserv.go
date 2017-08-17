@@ -11,10 +11,11 @@ import (
 	"path"
 	"time"
 
+	mgo "gopkg.in/mgo.v2"
+
 	"github.com/armadillica/pillar-notifserv/pillar"
 	"github.com/armadillica/pillar-notifserv/proxy"
 	"github.com/kelseyhightower/envconfig"
-	"gopkg.in/mgo.v2"
 )
 
 var session *mgo.Session
