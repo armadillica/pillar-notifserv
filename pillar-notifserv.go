@@ -76,7 +76,7 @@ func http_sse(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 
-			fmt.Fprintf(w, "id: %v\n", json_notif.Id)
+			fmt.Fprintf(w, "id: %v\n", json_notif.Id.Hex())
 			fmt.Fprintf(w, "event: notification\n")
 			fmt.Fprintf(w, "data: %s\n\n", msg)
 			f.Flush()
