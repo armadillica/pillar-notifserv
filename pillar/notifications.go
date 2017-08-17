@@ -2,11 +2,12 @@ package pillar
 
 import (
 	"fmt"
+	"log"
+	"time"
+
 	"github.com/eefret/gravatar"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
-	"log"
-	"time"
 )
 
 type Notification struct {

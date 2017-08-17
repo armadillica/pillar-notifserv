@@ -3,10 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/armadillica/pillar-notifserv/pillar"
-	"github.com/armadillica/pillar-notifserv/proxy"
-	"github.com/kelseyhightower/envconfig"
-	"gopkg.in/mgo.v2"
 	"html/template"
 	"log"
 	"net"
@@ -14,6 +10,11 @@ import (
 	"net/url"
 	"path"
 	"time"
+
+	"github.com/armadillica/pillar-notifserv/pillar"
+	"github.com/armadillica/pillar-notifserv/proxy"
+	"github.com/kelseyhightower/envconfig"
+	"gopkg.in/mgo.v2"
 )
 
 var session *mgo.Session
